@@ -1,0 +1,27 @@
+# Lancement de Jenkins pour le TP DevSecOps
+#
+#   cd jenkins-tp
+#   docker compose up -d --build
+#
+# Points clés :
+# - Le socket Docker de l'hôte est monté -> Jenkins peut lancer Semgrep / ZAP / Trivy.
+# - /var/jenkins_home est bind-monté à l'IDENTIQUE (même chemin dans et hors du conteneur).
+#   C'est INDISPENSABLE pour que les montages `docker run -v $WORKSPACE:...` lancés
+#   DEPUIS Jenkins pointent vers un chemin qui existe réellement sur l'hôte.
+services:
+  jenkins:
+    build: .
+    image: tp-jenkins:lts
+    container_name: jenkins
+    restart: unless-stopped
+    user: root            # nécessaire pour accéder au socket docker (GID 953)
+    group_add:
+      - "953"             # GID du groupe docker de l'hôte
+    ports:
+      - "8080:8080"       # UI Jenkins
+      - "50000:50000"     # agents JNLP
+    volumes:
+      - /var/jenkins_home:/var/jenkins_home
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - JAVA_OPTS=-Djenkins.install.runSetupWizard=true
